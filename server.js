@@ -1,6 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const multer = require("multer");
+const cors = require("cors");
 const {
   SendMessageCommand,
   SQSClient,
@@ -18,7 +19,7 @@ const client = new SQSClient({
     secretAccessKey: "91DC/VJXnnUYMsYX3Gm3sZTUhNcSiGbDgkfvTIXO",
   },
 });
-
+app.use(cors())
 app.use(express.json());
 app.use(morgan("dev"));
 
