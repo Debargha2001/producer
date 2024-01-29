@@ -1,16 +1,26 @@
 const express = require("express");
 const morgan = require("morgan");
 const multer = require("multer");
+const http = require("http");
 const cors = require("cors");
+const io = require('socket.io-client');
 const {
   SendMessageCommand,
   SQSClient,
   CreateQueueCommand,
   GetQueueUrlCommand,
 } = require("@aws-sdk/client-sqs");
+
 const storage = multer.memoryStorage();
 
 const app = express();
+
+const socketClient = io("http://localhost:5000");
+
+socketClient.on("connect", () => {
+  console.log("producer is connected to consumer");
+})
+
 
 const client = new SQSClient({
   region: "ap-south-1",
@@ -61,6 +71,8 @@ app.post(
         }),
       });
       const response = await client.send(sendMessagCommand);
+
+      socketClient.emit("recieveQueueMessage", "Message sent to queue")
 
       return res.json({ message: "Processing data" });
     } catch (error) {
