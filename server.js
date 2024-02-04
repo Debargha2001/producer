@@ -3,6 +3,7 @@ const morgan = require("morgan");
 const multer = require("multer");
 const cors = require("cors");
 const io = require("socket.io-client");
+const ExcelJS = require('exceljs');
 const {
   SendMessageCommand,
   SQSClient,
@@ -10,6 +11,7 @@ const {
   GetQueueUrlCommand,
   QueueDoesNotExist,
 } = require("@aws-sdk/client-sqs");
+const templateData = require("./look-up/data.json")
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -119,6 +121,44 @@ app.post("/upload-excel", upload, async (req, res) => {
   } catch (error) {
     console.error("Error: ", error);
     return res.status(500).json({ error: error, message: error.message });
+  }
+});
+
+app.get('/generate-excel', async (_req, res) => {
+  try {
+    // Create a new workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    
+
+
+    for(const [key, value] of Object.entries(templateData)){
+      const worksheet = workbook.addWorksheet(key); 
+      const headers = value.map(v => {
+        return {
+          header: v,
+          key: v.split(" ").join("_").toLowerCase(),
+          width: 30
+        }
+      })
+      // set headers for each sheet
+      worksheet.columns = headers;
+    }
+
+    // Generate a buffer from the workbook
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // Create a multipart response
+    res.set({
+      'Content-Type': 'multipart/mixed',
+      'Content-Disposition': 'attachment; filename=excel-template.xlsx',
+    });
+
+    // Send the buffer as a part of the multipart response
+    res.write(buffer, 'binary');
+    res.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
