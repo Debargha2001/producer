@@ -3,7 +3,7 @@ const morgan = require("morgan");
 const multer = require("multer");
 const cors = require("cors");
 const io = require("socket.io-client");
-const ExcelJS = require('exceljs');
+const ExcelJS = require("exceljs");
 const {
   SendMessageCommand,
   SQSClient,
@@ -11,7 +11,7 @@ const {
   GetQueueUrlCommand,
   QueueDoesNotExist,
 } = require("@aws-sdk/client-sqs");
-const templateData = require("./look-up/data.json")
+const templateData = require("./look-up/data.json");
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -124,22 +124,76 @@ app.post("/upload-excel", upload, async (req, res) => {
   }
 });
 
-app.get('/generate-excel', async (_req, res) => {
+app.get("/generate-excel", async (_req, res) => {
   try {
     // Create a new workbook and worksheet
     const workbook = new ExcelJS.Workbook();
+
+    const instructionSheet = workbook.addWorksheet("Instructions");
     
+    instructionSheet.mergeCells("A1:J6");
+    // const mergedCell = (instructionSheet.getCell("A1:J6").value = {
+    //   richText: [
+    //     {
+    //       font: { bold: true, italic: true },
+    //       text: "Instruction for excel template",
+    //     },
+    //   ],excelmodifications
+    // });
+  //   let lastColumnIndex = 0;
+  //   instructionSheet.eachRow({ includeEmpty: true }, function(row, rowNumber) {
+  //     console.log("row number: ",rowNumber);
+  //     row.eachCell({ includeEmpty: true },function(cell, colNumber) {
+  //       // some code
+  //       console.log("col number: ",colNumber);
+  //       lastColumnIndex = Math.max(lastColumnIndex, colNumber)
+  //   })
+  //     //Do whatever you want to do with this row like inserting in db, etc
+  // });
+  // console.log(lastColumnIndex)
+    console.log(instructionSheet.columnCount)
+    for (let i = 10; i <= 1000; i++) {
+      const column = instructionSheet.getColumn(i);
+      column.hidden = true
+    }
+
+    const validationSheet = workbook.addWorksheet("Dropdown Sheet");
 
 
-    for(const [key, value] of Object.entries(templateData)){
-      const worksheet = workbook.addWorksheet(key); 
-      const headers = value.map(v => {
+    validationSheet.columns = [
+      {
+        header: "Is Active",
+        key: "is_active",
+        width: 30
+      }
+    ]
+    for(let i=2;i<=10;i++){
+      validationSheet.getCell('A'+i).dataValidation ={
+        type: 'list',
+        allowBlank: true,
+        formulae:['"Yes,No"'],
+        errorTitle: 'Invalid value',
+        error: 'Please select a value from the dropdown list (Yes or No)',
+      }
+    }
+
+    // validationSheet.eachRow({ includeEmpty: true }, function(row, rowNumber) {
+    //   console.log('Row ' + rowNumber + ' = ' + JSON.stringify(row.values));
+    //   row.eachCell({ includeEmpty: true },function(cell, colNumber) {
+    //     // some code
+    //     console.log("col number: ",colNumber);
+    // })
+    // })
+
+    for (const [key, value] of Object.entries(templateData)) {
+      const worksheet = workbook.addWorksheet(key);
+      const headers = value.map((v) => {
         return {
           header: v,
           key: v.split(" ").join("_").toLowerCase(),
-          width: 30
-        }
-      })
+          width: 30,
+        };
+      });
       // set headers for each sheet
       worksheet.columns = headers;
     }
@@ -149,16 +203,16 @@ app.get('/generate-excel', async (_req, res) => {
 
     // Create a multipart response
     res.set({
-      'Content-Type': 'multipart/mixed',
-      'Content-Disposition': 'attachment; filename=excel-template.xlsx',
+      "Content-Type": "multipart/mixed",
+      "Content-Disposition": "attachment; filename=excel-template.xlsx",
     });
 
     // Send the buffer as a part of the multipart response
-    res.write(buffer, 'binary');
+    res.write(buffer, "binary");
     res.end();
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
